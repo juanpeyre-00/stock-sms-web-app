@@ -1,0 +1,163 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum CompanyPlan {
+  TRIAL
+  PRO
+  INTERNAL
+}
+
+enum CompanyStatus {
+  ACTIVE
+  TRIALING
+  PAST_DUE
+  BLOCKED
+  CANCELED
+}
+
+enum UserRole {
+  OWNER
+  ADMIN
+  SUPERVISOR
+  SUPERADMIN
+}
+
+enum SmsStatus {
+  DRAFT
+  QUEUED
+  SENT
+  FAILED
+}
+
+model Company {
+  id                 String              @id @default(cuid())
+  name               String
+  slug               String              @unique
+  plan               CompanyPlan         @default(TRIAL)
+  status             CompanyStatus       @default(TRIALING)
+  monthlyPriceCents  Int                 @default(899)
+  trialEndsAt        DateTime?
+  lifetimeAccess     Boolean             @default(false)
+  internalNotes      String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  users              User[]
+  collaborators      Collaborator[]
+  products           Product[]
+  dailyStockReports  DailyStockReport[]
+  smsMessages        SmsMessage[]
+  subscriptionEvents SubscriptionEvent[]
+}
+
+model User {
+  id           String   @id @default(cuid())
+  companyId    String
+  company      Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         UserRole @default(ADMIN)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Collaborator {
+  id         String         @id @default(cuid())
+  companyId  String
+  company    Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name       String
+  phone      String
+  position   String?
+  active     Boolean        @default(true)
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+  recipients SmsRecipient[]
+
+  @@unique([companyId, phone])
+}
+
+model Product {
+  id         String      @id @default(cuid())
+  companyId  String
+  company    Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  sku        String?
+  name       String
+  category   String?
+  unit       String      @default("unidad")
+  minStock   Int         @default(0)
+  active     Boolean     @default(true)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  stockItems StockItem[]
+
+  @@unique([companyId, sku])
+}
+
+model DailyStockReport {
+  id          String       @id @default(cuid())
+  companyId   String
+  company     Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  reportDate  DateTime
+  notes       String?
+  createdBy   String?
+  createdAt   DateTime     @default(now())
+  items       StockItem[]
+  smsMessages SmsMessage[]
+
+  @@unique([companyId, reportDate])
+}
+
+model StockItem {
+  id        String           @id @default(cuid())
+  reportId  String
+  report    DailyStockReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product          @relation(fields: [productId], references: [id], onDelete: Restrict)
+  quantity  Int
+  note      String?
+
+  @@unique([reportId, productId])
+}
+
+model SmsMessage {
+  id         String            @id @default(cuid())
+  companyId  String
+  company    Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  reportId   String?
+  report     DailyStockReport? @relation(fields: [reportId], references: [id], onDelete: SetNull)
+  body       String
+  status     SmsStatus         @default(DRAFT)
+  providerId String?
+  sentAt     DateTime?
+  createdAt  DateTime          @default(now())
+  recipients SmsRecipient[]
+}
+
+model SmsRecipient {
+  id             String       @id @default(cuid())
+  smsMessageId   String
+  smsMessage     SmsMessage   @relation(fields: [smsMessageId], references: [id], onDelete: Cascade)
+  collaboratorId String
+  collaborator   Collaborator @relation(fields: [collaboratorId], references: [id], onDelete: Restrict)
+  phoneSnapshot  String
+  status         SmsStatus    @default(QUEUED)
+  providerId     String?
+  errorMessage   String?
+  sentAt         DateTime?
+}
+
+model SubscriptionEvent {
+  id          String   @id @default(cuid())
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  type        String
+  amountCents Int?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+}
