@@ -2,9 +2,10 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Boxes, LogOut, X } from 'lucide-react'
+import { Boxes, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { navItems } from '@/components/nav-items'
+import { LogoutButton } from '@/components/logout-button'
 
 export function Sidebar({
   open = false,
@@ -17,7 +18,6 @@ export function Sidebar({
 
   return (
     <>
-      {/* Overlay for mobile */}
       {open && (
         <div
           className="fixed inset-0 z-30 bg-foreground/40 md:hidden"
@@ -32,7 +32,6 @@ export function Sidebar({
           open ? 'translate-x-0' : '-translate-x-full',
         )}
       >
-        {/* Brand */}
         <div className="flex items-center justify-between gap-2 px-5 py-5">
           <Link href="/dashboard" className="flex items-center gap-2.5">
             <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
@@ -52,7 +51,6 @@ export function Sidebar({
           </button>
         </div>
 
-        {/* Nav */}
         <nav className="flex-1 space-y-1 px-3 py-2">
           <p className="px-3 pb-2 text-xs font-medium uppercase tracking-wider text-sidebar-foreground/50">
             Navegación
@@ -61,6 +59,7 @@ export function Sidebar({
             const active =
               pathname === item.href || pathname.startsWith(`${item.href}/`)
             const Icon = item.icon
+
             return (
               <Link
                 key={item.href}
@@ -80,26 +79,19 @@ export function Sidebar({
           })}
         </nav>
 
-        {/* Footer / user */}
         <div className="border-t border-sidebar-border p-3">
           <div className="flex items-center gap-3 rounded-lg px-3 py-2">
             <span className="flex h-9 w-9 items-center justify-center rounded-full bg-sidebar-accent text-sm font-semibold text-sidebar-accent-foreground">
-              MA
+              JP
             </span>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium">María Álvarez</p>
+              <p className="truncate text-sm font-medium">Juan Peyre</p>
               <p className="truncate text-xs text-sidebar-foreground/50">
-                Administradora
+                Superadmin
               </p>
             </div>
           </div>
-          <Link
-            href="/"
-            className="mt-1 flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-          >
-            <LogOut className="h-[18px] w-[18px]" />
-            Cerrar sesión
-          </Link>
+          <LogoutButton />
         </div>
       </aside>
     </>

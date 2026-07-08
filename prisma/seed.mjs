@@ -1,4 +1,5 @@
 import fs from 'node:fs'
+import crypto from 'node:crypto'
 import pg from 'pg'
 
 function readEnv(path) {
@@ -19,6 +20,13 @@ function readEnv(path) {
 
 const env = { ...readEnv('.env'), ...readEnv('.env.local') }
 
+function hashPassword(password) {
+  const salt = crypto.randomBytes(16).toString('hex')
+  const hash = crypto.scryptSync(password, salt, 64).toString('hex')
+
+  return `scrypt$${salt}$${hash}`
+}
+
 if (!env.DATABASE_URL) {
   throw new Error('DATABASE_URL is required to seed StockSMS')
 }
@@ -32,6 +40,7 @@ const client = new Client({
 const now = new Date()
 const trialEndsAt = new Date(now)
 trialEndsAt.setDate(trialEndsAt.getDate() + 7)
+const adminPasswordHash = hashPassword('StockSMS2026!')
 
 await client.connect()
 
@@ -67,12 +76,14 @@ try {
         id, "companyId", name, email, "passwordHash", role, "createdAt", "updatedAt"
       )
       VALUES
-        ('user_admin_tololo', 'company_tololo', 'Juan Peyre', 'admin@tololo.cl', 'pending-password-hash', 'SUPERADMIN', now(), now())
+        ('user_admin_tololo', 'company_tololo', 'Juan Peyre', 'admin@tololo.cl', $1, 'SUPERADMIN', now(), now())
       ON CONFLICT (email) DO UPDATE SET
         name = EXCLUDED.name,
+        "passwordHash" = EXCLUDED."passwordHash",
         role = EXCLUDED.role,
         "updatedAt" = now()
     `,
+    [adminPasswordHash],
   )
 
   const products = [
