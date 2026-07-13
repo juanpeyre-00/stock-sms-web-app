@@ -1,15 +1,19 @@
-import Link from 'next/link'
+'use client'
+
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   ArrowRight,
-  BadgeCheck,
   BarChart3,
   Boxes,
   Building2,
   Check,
   ClipboardList,
+  Lock,
+  Mail,
   MessageSquareText,
   ShieldCheck,
-  TimerReset,
+  User,
 } from 'lucide-react'
 import { MONTHLY_PRICE_LABEL, TRIAL_DAYS } from '@/lib/billing'
 
@@ -17,198 +21,301 @@ const features = [
   {
     title: 'Inventario diario',
     description:
-      'Registra productos, cantidades minimas y movimientos del turno sin planillas sueltas.',
+      'Controla productos, cantidades minimas y movimientos desde un panel claro.',
     icon: ClipboardList,
   },
   {
     title: 'Alertas por SMS',
     description:
-      'Prepara mensajes para equipos y proveedores cuando el stock necesita accion.',
+      'Prepara avisos para tu equipo cuando un producto requiere accion.',
     icon: MessageSquareText,
   },
   {
-    title: 'Panel para empresas',
+    title: 'Empresas separadas',
     description:
-      'Cada cliente queda separado con su plan, trial, estado de pago y colaboradores.',
+      'Cada cliente tiene su propia cuenta, trial, colaboradores y plan.',
     icon: Building2,
   },
 ]
 
-const checklist = [
-  'Panel web listo para operar',
-  'Base de datos Neon conectada',
-  'Login seguro para administradores',
-  'Trial comercial de 7 dias',
-  'Precio publico de USD 8.99 al mes',
-]
-
 export default function PublicHomePage() {
+  const router = useRouter()
+  const [mode, setMode] = useState<'signup' | 'login'>('signup')
+  const [companyName, setCompanyName] = useState('')
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  async function handleSignup() {
+    const response = await fetch('/api/signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ companyName, name, email, password }),
+    })
+    const data = await response.json()
+
+    if (!response.ok) {
+      throw new Error(data.message || 'No pudimos crear tu cuenta.')
+    }
+
+    try {
+      const checkoutResponse = await fetch('/api/billing/checkout', {
+        method: 'POST',
+      })
+      const checkoutData = await checkoutResponse.json()
+
+      if (checkoutResponse.ok && checkoutData.url) {
+        window.location.href = checkoutData.url
+        return
+      }
+    } catch {
+      // The account is ready; payment setup can be finished later.
+    }
+
+    router.push(data.redirectTo || '/dashboard')
+    router.refresh()
+  }
+
+  async function handleLogin() {
+    const response = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    })
+    const data = await response.json()
+
+    if (!response.ok) {
+      throw new Error(data.message || 'No pudimos iniciar sesion.')
+    }
+
+    router.push(data.redirectTo || '/dashboard')
+    router.refresh()
+  }
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setError('')
+    setLoading(true)
+
+    try {
+      if (mode === 'signup') {
+        await handleSignup()
+      } else {
+        await handleLogin()
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No pudimos continuar.')
+      setLoading(false)
+    }
+  }
+
   return (
     <main className="min-h-screen bg-background text-foreground">
       <header className="border-b border-border bg-card/80 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-4 md:px-8">
-          <Link href="/" className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2.5">
             <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
               <Boxes className="h-5 w-5" />
             </span>
             <span className="text-lg font-semibold tracking-tight">
               Stock<span className="text-primary">SMS</span>
             </span>
-          </Link>
-          <nav className="flex items-center gap-2">
-            <Link
-              href="/login"
-              className="rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-            >
-              Ingresar
-            </Link>
-            <Link
-              href="/contratar"
-              className="hidden rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 sm:inline-flex"
-            >
-              Contratar
-            </Link>
-          </nav>
+          </div>
+          <div className="hidden items-center gap-3 text-sm text-muted-foreground sm:flex">
+            <Check className="h-4 w-4 text-primary" />
+            Todo desde esta misma pagina
+          </div>
         </div>
       </header>
 
-      <section className="border-b border-border">
-        <div className="mx-auto grid max-w-7xl gap-10 px-5 py-14 md:px-8 lg:grid-cols-[1.05fr_0.95fr] lg:py-20">
-          <div className="flex flex-col justify-center">
-            <div className="mb-5 inline-flex w-fit items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-sm font-medium text-muted-foreground">
-              <TimerReset className="h-4 w-4 text-primary" />
-              {TRIAL_DAYS} dias gratis, luego {MONTHLY_PRICE_LABEL}
-            </div>
-            <h1 className="max-w-3xl text-4xl font-semibold leading-tight text-foreground md:text-6xl">
-              Control de stock diario para equipos que necesitan orden hoy.
-            </h1>
-            <p className="mt-5 max-w-2xl text-lg leading-8 text-muted-foreground">
-              StockSMS centraliza inventario, colaboradores, historial y alertas
-              en una aplicacion web simple para operar y vender como servicio
-              mensual.
-            </p>
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <Link
-                href="/contratar"
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-              >
-                Contratar por {MONTHLY_PRICE_LABEL}
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-              <Link
-                href="/login"
-                className="inline-flex h-11 items-center justify-center rounded-lg border border-border bg-card px-5 text-sm font-medium text-foreground transition-colors hover:bg-secondary"
-              >
-                Entrar a la aplicacion
-              </Link>
-            </div>
-          </div>
+      <section className="mx-auto grid max-w-7xl gap-8 px-5 py-10 md:px-8 lg:grid-cols-[1fr_440px] lg:py-14">
+        <div className="flex flex-col justify-center">
+          <p className="text-sm font-medium text-primary">
+            Aplicacion web para vender desde hoy
+          </p>
+          <h1 className="mt-3 max-w-3xl text-4xl font-semibold leading-tight md:text-6xl">
+            StockSMS: inventario, alertas y empresas en un solo panel.
+          </h1>
+          <p className="mt-5 max-w-2xl text-lg leading-8 text-muted-foreground">
+            Tus clientes pueden crear su empresa, entrar al dashboard y empezar
+            un trial de {TRIAL_DAYS} dias. Luego el plan queda en{' '}
+            {MONTHLY_PRICE_LABEL}.
+          </p>
 
-          <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
-            <div className="flex items-center justify-between border-b border-border pb-4">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">
-                  Resumen operativo
-                </p>
-                <h2 className="mt-1 text-xl font-semibold">Panel StockSMS</h2>
-              </div>
-              <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-                Online
-              </span>
+          <div className="mt-8 grid max-w-2xl gap-3 sm:grid-cols-3">
+            <div className="rounded-lg border border-border bg-card p-4">
+              <BarChart3 className="h-5 w-5 text-primary" />
+              <p className="mt-3 text-2xl font-semibold">Online</p>
+              <p className="text-sm text-muted-foreground">Vercel activo</p>
             </div>
-            <div className="grid gap-4 py-5 sm:grid-cols-2">
-              <div className="rounded-lg border border-border bg-background p-4">
-                <BarChart3 className="h-5 w-5 text-primary" />
-                <p className="mt-4 text-2xl font-semibold">1,284</p>
-                <p className="text-sm text-muted-foreground">
-                  Productos monitoreados
-                </p>
-              </div>
-              <div className="rounded-lg border border-border bg-background p-4">
-                <ShieldCheck className="h-5 w-5 text-primary" />
-                <p className="mt-4 text-2xl font-semibold">99.9%</p>
-                <p className="text-sm text-muted-foreground">
-                  Datos centralizados
-                </p>
-              </div>
+            <div className="rounded-lg border border-border bg-card p-4">
+              <ShieldCheck className="h-5 w-5 text-primary" />
+              <p className="mt-3 text-2xl font-semibold">Neon</p>
+              <p className="text-sm text-muted-foreground">Base conectada</p>
             </div>
-            <div className="rounded-lg border border-border bg-background p-4">
-              <p className="text-sm font-medium text-foreground">
-                Plan comercial
-              </p>
-              <p className="mt-2 text-3xl font-semibold">
-                USD 8.99
-                <span className="text-sm font-normal text-muted-foreground">
-                  {' '}
-                  / mes
-                </span>
-              </p>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Pensado para que sea facil venderlo a pequenas empresas y
-                empezar a generar ingresos recurrentes.
-              </p>
+            <div className="rounded-lg border border-border bg-card p-4">
+              <Boxes className="h-5 w-5 text-primary" />
+              <p className="mt-3 text-2xl font-semibold">USD 8.99</p>
+              <p className="text-sm text-muted-foreground">Mensual</p>
             </div>
           </div>
         </div>
+
+        <form
+          onSubmit={handleSubmit}
+          className="rounded-xl border border-border bg-card p-5 shadow-sm"
+        >
+          <div className="grid grid-cols-2 rounded-lg bg-secondary p-1">
+            <button
+              type="button"
+              onClick={() => {
+                setMode('signup')
+                setError('')
+              }}
+              className={`h-10 rounded-md text-sm font-medium transition-colors ${
+                mode === 'signup'
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground'
+              }`}
+            >
+              Crear cuenta
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setMode('login')
+                setError('')
+              }}
+              className={`h-10 rounded-md text-sm font-medium transition-colors ${
+                mode === 'login'
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground'
+              }`}
+            >
+              Entrar
+            </button>
+          </div>
+
+          <h2 className="mt-6 text-xl font-semibold">
+            {mode === 'signup' ? 'Contratar StockSMS' : 'Entrar al panel'}
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {mode === 'signup'
+              ? `${TRIAL_DAYS} dias gratis, luego ${MONTHLY_PRICE_LABEL}.`
+              : 'Usa el correo y clave de tu empresa.'}
+          </p>
+
+          <div className="mt-6 space-y-4">
+            {mode === 'signup' && (
+              <>
+                <label className="block space-y-1.5">
+                  <span className="text-sm font-medium">Empresa</span>
+                  <span className="relative block">
+                    <Building2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <input
+                      required
+                      value={companyName}
+                      onChange={(event) => setCompanyName(event.target.value)}
+                      placeholder="Ej: Mariscos del Sur"
+                      className="h-11 w-full rounded-lg border border-input bg-background pl-10 pr-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
+                    />
+                  </span>
+                </label>
+
+                <label className="block space-y-1.5">
+                  <span className="text-sm font-medium">Tu nombre</span>
+                  <span className="relative block">
+                    <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <input
+                      required
+                      value={name}
+                      onChange={(event) => setName(event.target.value)}
+                      placeholder="Nombre y apellido"
+                      className="h-11 w-full rounded-lg border border-input bg-background pl-10 pr-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
+                    />
+                  </span>
+                </label>
+              </>
+            )}
+
+            <label className="block space-y-1.5">
+              <span className="text-sm font-medium">Correo</span>
+              <span className="relative block">
+                <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  required
+                  type="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  placeholder="tu@empresa.com"
+                  className="h-11 w-full rounded-lg border border-input bg-background pl-10 pr-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
+                />
+              </span>
+            </label>
+
+            <label className="block space-y-1.5">
+              <span className="text-sm font-medium">Clave</span>
+              <span className="relative block">
+                <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  required
+                  type="password"
+                  minLength={8}
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  placeholder="Minimo 8 caracteres"
+                  className="h-11 w-full rounded-lg border border-input bg-background pl-10 pr-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
+                />
+              </span>
+            </label>
+          </div>
+
+          {error && (
+            <p className="mt-4 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {error}
+            </p>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="mt-6 flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-primary text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-70"
+          >
+            {loading
+              ? 'Procesando...'
+              : mode === 'signup'
+                ? 'Crear cuenta y entrar'
+                : 'Entrar al dashboard'}
+            <ArrowRight className="h-4 w-4" />
+          </button>
+
+          {mode === 'login' && (
+            <p className="mt-4 text-center text-xs text-muted-foreground">
+              Demo: admin@tololo.cl / StockSMS2026!
+            </p>
+          )}
+        </form>
       </section>
 
-      <section className="mx-auto max-w-7xl px-5 py-12 md:px-8">
-        <div className="grid gap-4 md:grid-cols-3">
+      <section className="border-t border-border bg-card">
+        <div className="mx-auto grid max-w-7xl gap-4 px-5 py-10 md:grid-cols-3 md:px-8">
           {features.map((feature) => {
             const Icon = feature.icon
             return (
               <article
                 key={feature.title}
-                className="rounded-xl border border-border bg-card p-5"
+                className="rounded-lg border border-border bg-background p-4"
               >
-                <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent text-accent-foreground">
-                  <Icon className="h-5 w-5" />
-                </span>
-                <h2 className="mt-4 font-semibold">{feature.title}</h2>
+                <Icon className="h-5 w-5 text-primary" />
+                <h2 className="mt-3 font-semibold">{feature.title}</h2>
                 <p className="mt-2 text-sm leading-6 text-muted-foreground">
                   {feature.description}
                 </p>
               </article>
             )
           })}
-        </div>
-      </section>
-
-      <section id="contacto" className="border-t border-border bg-card">
-        <div className="mx-auto grid max-w-7xl gap-8 px-5 py-12 md:px-8 lg:grid-cols-[0.9fr_1.1fr]">
-          <div>
-            <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
-              <BadgeCheck className="h-4 w-4" />
-              Listo para vender
-            </div>
-            <h2 className="mt-4 text-3xl font-semibold">
-              Pagina publica + aplicacion privada en una sola URL.
-            </h2>
-            <p className="mt-3 text-muted-foreground">
-              La portada sirve para mostrar el producto, explicar el precio y
-              captar clientes. El login lleva al panel donde se administran
-              empresas, trials y licencias.
-            </p>
-            <p className="mt-4 rounded-lg border border-border bg-background p-3 text-sm font-medium text-foreground">
-              Captacion actual: cualquier cliente puede presionar Contratar,
-              crear su empresa, activar trial y entrar a su panel privado.
-              El cobro automatico se conecta en el siguiente paso con Stripe o
-              Mercado Pago.
-            </p>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {checklist.map((item) => (
-              <div
-                key={item}
-                className="flex items-center gap-3 rounded-lg border border-border bg-background p-3 text-sm"
-              >
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                  <Check className="h-4 w-4" />
-                </span>
-                {item}
-              </div>
-            ))}
-          </div>
         </div>
       </section>
     </main>
