@@ -3,6 +3,7 @@ import { Building2, Crown, ShieldCheck, TimerReset } from 'lucide-react'
 import { MONTHLY_PRICE_LABEL, TRIAL_DAYS } from '@/lib/billing'
 import { prisma } from '@/lib/prisma'
 import { SESSION_COOKIE, verifySession } from '@/lib/session'
+import { BillingCheckoutButton } from '@/components/billing-checkout-button'
 
 export const dynamic = 'force-dynamic'
 
@@ -100,6 +101,11 @@ export default async function EmpresasPage() {
                 <p className="mt-3 text-xs text-muted-foreground">
                   Trial hasta {empresa.trialEndsAt.toLocaleDateString('es-CL')}
                 </p>
+              )}
+              {!empresa.lifetimeAccess && empresa.plan !== 'INTERNAL' && (
+                <div className="mt-4">
+                  <BillingCheckoutButton />
+                </div>
               )}
             </article>
           )

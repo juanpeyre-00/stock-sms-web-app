@@ -34,7 +34,17 @@ export default function SignupPage() {
       return
     }
 
-    router.push(data.redirectTo || '/dashboard')
+    const checkoutResponse = await fetch('/api/billing/checkout', {
+      method: 'POST',
+    })
+    const checkoutData = await checkoutResponse.json()
+
+    if (checkoutResponse.ok && checkoutData.url) {
+      window.location.href = checkoutData.url
+      return
+    }
+
+    router.push(data.redirectTo || '/empresas')
     router.refresh()
   }
 
@@ -69,8 +79,8 @@ export default function SignupPage() {
           </h1>
           <p className="mt-4 text-lg leading-8 text-muted-foreground">
             Empieza con {TRIAL_DAYS} dias gratis. Luego el plan queda en{' '}
-            {MONTHLY_PRICE_LABEL}. El cobro automatico con Stripe/Mercado Pago
-            va en el siguiente bloque.
+            {MONTHLY_PRICE_LABEL}. Stripe guarda el metodo de pago y activa la
+            suscripcion mensual.
           </p>
           <div className="mt-6 rounded-xl border border-border bg-card p-5">
             <p className="text-sm font-medium text-muted-foreground">
@@ -79,7 +89,7 @@ export default function SignupPage() {
             <ul className="mt-3 space-y-3 text-sm text-foreground">
               <li>1. Se crea tu empresa en la base de datos.</li>
               <li>2. Tu usuario queda como OWNER.</li>
-              <li>3. Entras al dashboard privado de StockSMS.</li>
+              <li>3. Stripe abre el checkout para activar la suscripcion.</li>
             </ul>
           </div>
         </div>
