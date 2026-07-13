@@ -28,9 +28,23 @@ export async function POST() {
     )
   }
 
-  const stripe = getStripe()
-  const appUrl = getAppUrl()
   const ownerEmail = company.users[0]?.email || session.email
+
+  let stripe
+  try {
+    stripe = getStripe()
+  } catch {
+    return NextResponse.json(
+      {
+        ok: false,
+        message:
+          'Stripe todavia no esta configurado. La cuenta fue creada, pero falta activar pagos.',
+      },
+      { status: 503 },
+    )
+  }
+
+  const appUrl = getAppUrl()
 
   const checkoutSession = await stripe.checkout.sessions.create({
     mode: 'subscription',

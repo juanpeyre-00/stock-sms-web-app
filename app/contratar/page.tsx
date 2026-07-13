@@ -34,14 +34,18 @@ export default function SignupPage() {
       return
     }
 
-    const checkoutResponse = await fetch('/api/billing/checkout', {
-      method: 'POST',
-    })
-    const checkoutData = await checkoutResponse.json()
+    try {
+      const checkoutResponse = await fetch('/api/billing/checkout', {
+        method: 'POST',
+      })
+      const checkoutData = await checkoutResponse.json()
 
-    if (checkoutResponse.ok && checkoutData.url) {
-      window.location.href = checkoutData.url
-      return
+      if (checkoutResponse.ok && checkoutData.url) {
+        window.location.href = checkoutData.url
+        return
+      }
+    } catch {
+      // The account is already created; let the user enter the app.
     }
 
     router.push(data.redirectTo || '/empresas')
