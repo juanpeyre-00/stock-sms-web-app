@@ -6,7 +6,19 @@ import { Menu, Bell, Search } from 'lucide-react'
 import { Sidebar } from '@/components/sidebar'
 import { navItems } from '@/components/nav-items'
 
-export function DashboardShell({ children }: { children: React.ReactNode }) {
+type ShellUser = {
+  name: string
+  role: string
+  companyName: string
+}
+
+export function DashboardShell({
+  children,
+  user,
+}: {
+  children: React.ReactNode
+  user: ShellUser
+}) {
   const [open, setOpen] = useState(false)
   const pathname = usePathname()
   const current = navItems.find(
@@ -15,7 +27,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen bg-background">
-      <Sidebar open={open} onClose={() => setOpen(false)} />
+      <Sidebar open={open} onClose={() => setOpen(false)} user={user} />
 
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Top bar */}

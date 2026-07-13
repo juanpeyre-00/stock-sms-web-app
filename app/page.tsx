@@ -63,10 +63,10 @@ export default function PublicHomePage() {
               Ingresar
             </Link>
             <Link
-              href="#contacto"
+              href="/contratar"
               className="hidden rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 sm:inline-flex"
             >
-              Solicitar acceso
+              Contratar
             </Link>
           </nav>
         </div>
@@ -89,7 +89,7 @@ export default function PublicHomePage() {
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Link
-                href="#contacto"
+                href="/contratar"
                 className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
               >
                 Contratar por {MONTHLY_PRICE_LABEL}
@@ -190,9 +190,10 @@ export default function PublicHomePage() {
               empresas, trials y licencias.
             </p>
             <p className="mt-4 rounded-lg border border-border bg-background p-3 text-sm font-medium text-foreground">
-              Captacion actual: publica este link y crea las cuentas desde el
-              panel. El cobro automatico se conecta en el siguiente paso con
-              Stripe o Mercado Pago.
+              Captacion actual: cualquier cliente puede presionar Contratar,
+              crear su empresa, activar trial y entrar a su panel privado.
+              El cobro automatico se conecta en el siguiente paso con Stripe o
+              Mercado Pago.
             </p>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">

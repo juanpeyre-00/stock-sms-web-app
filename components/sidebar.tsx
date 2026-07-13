@@ -10,11 +10,24 @@ import { LogoutButton } from '@/components/logout-button'
 export function Sidebar({
   open = false,
   onClose,
+  user,
 }: {
   open?: boolean
   onClose?: () => void
+  user: {
+    name: string
+    role: string
+    companyName: string
+  }
 }) {
   const pathname = usePathname()
+  const initials = user.name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase()
 
   return (
     <>
@@ -82,12 +95,12 @@ export function Sidebar({
         <div className="border-t border-sidebar-border p-3">
           <div className="flex items-center gap-3 rounded-lg px-3 py-2">
             <span className="flex h-9 w-9 items-center justify-center rounded-full bg-sidebar-accent text-sm font-semibold text-sidebar-accent-foreground">
-              JP
+              {initials || 'US'}
             </span>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium">Juan Peyre</p>
+              <p className="truncate text-sm font-medium">{user.name}</p>
               <p className="truncate text-xs text-sidebar-foreground/50">
-                Superadmin
+                {user.companyName} · {user.role}
               </p>
             </div>
           </div>
