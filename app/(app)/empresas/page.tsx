@@ -1,6 +1,8 @@
+import { cookies } from 'next/headers'
 import { Building2, Crown, ShieldCheck, TimerReset } from 'lucide-react'
 import { MONTHLY_PRICE_LABEL, TRIAL_DAYS } from '@/lib/billing'
 import { prisma } from '@/lib/prisma'
+import { SESSION_COOKIE, verifySession } from '@/lib/session'
 
 export const dynamic = 'force-dynamic'
 
@@ -39,7 +41,11 @@ function companyIcon(company: { lifetimeAccess: boolean; plan: string }) {
 }
 
 export default async function EmpresasPage() {
+  const cookieStore = await cookies()
+  const session = await verifySession(cookieStore.get(SESSION_COOKIE)?.value)
+  const canSeeAllCompanies = session?.role === 'SUPERADMIN'
   const empresas = await prisma.company.findMany({
+    where: canSeeAllCompanies ? undefined : { id: session?.companyId },
     orderBy: [{ lifetimeAccess: 'desc' }, { createdAt: 'asc' }],
     select: {
       id: true,
@@ -59,9 +65,9 @@ export default async function EmpresasPage() {
           Empresas y licencias
         </h1>
         <p className="max-w-3xl text-sm text-muted-foreground">
-          Base comercial de StockSMS: Tololo queda como cuenta interna gratuita,
-          mientras las empresas normales tienen prueba de {TRIAL_DAYS} dias y
-          luego pagan {MONTHLY_PRICE_LABEL}.
+          {canSeeAllCompanies
+            ? `Base comercial de StockSMS: cuentas internas, trials y empresas que luego pagan ${MONTHLY_PRICE_LABEL}.`
+            : `Tu empresa tiene prueba de ${TRIAL_DAYS} dias y luego paga ${MONTHLY_PRICE_LABEL}.`}
         </p>
       </div>
 

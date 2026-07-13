@@ -1,5 +1,7 @@
+import { cookies } from 'next/headers'
 import { MoreHorizontal, Phone, Plus, Search } from 'lucide-react'
 import { prisma } from '@/lib/prisma'
+import { SESSION_COOKIE, verifySession } from '@/lib/session'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,8 +14,10 @@ function initials(name: string) {
 }
 
 export default async function ColaboradoresPage() {
+  const cookieStore = await cookies()
+  const session = await verifySession(cookieStore.get(SESSION_COOKIE)?.value)
   const colaboradores = await prisma.collaborator.findMany({
-    where: { company: { slug: 'tololo' } },
+    where: { companyId: session?.companyId },
     orderBy: { createdAt: 'asc' },
     select: {
       id: true,
@@ -57,6 +61,16 @@ export default async function ColaboradoresPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
+              {colaboradores.length === 0 && (
+                <tr>
+                  <td
+                    colSpan={5}
+                    className="px-5 py-10 text-center text-sm text-muted-foreground"
+                  >
+                    Aun no hay colaboradores en esta empresa.
+                  </td>
+                </tr>
+              )}
               {colaboradores.map((colaborador) => (
                 <tr key={colaborador.id} className="hover:bg-secondary/50">
                   <td className="px-5 py-4">
