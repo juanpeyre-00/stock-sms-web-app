@@ -9,6 +9,8 @@ __v0_jsx-dev-runtime.ts
 .vercel-cli-local/
 .ssh-github/
 .npm-cache/
+LocalLow/
+vercel-*.log
 
 # Environment variables
 .env
@@ -21,3 +23,6 @@ node_modules
 .next/
 .DS_Store
 /lib/generated/prisma
+
+.vercel
+.env*
