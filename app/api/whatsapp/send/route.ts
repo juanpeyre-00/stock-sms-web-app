@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 import { SmsStatus } from '@/lib/generated/prisma/enums'
 import { prisma } from '@/lib/prisma'
 import { SESSION_COOKIE, verifySession } from '@/lib/session'
-import { isWhatsAppConfigured, sendWhatsAppText } from '@/lib/whatsapp'
+import { sendWhatsAppText } from '@/lib/whatsapp'
 
 export async function POST(request: Request) {
   const cookieStore = await cookies()
@@ -29,12 +29,21 @@ export async function POST(request: Request) {
     )
   }
 
-  if (!isWhatsAppConfigured()) {
+  const company = await prisma.company.findUnique({
+    where: { id: session.companyId },
+    select: {
+      whatsappAccessToken: true,
+      whatsappPhoneNumberId: true,
+      whatsappDisplayName: true,
+    },
+  })
+
+  if (!company?.whatsappAccessToken || !company.whatsappPhoneNumberId) {
     return NextResponse.json(
       {
         ok: false,
         message:
-          'Falta conectar WhatsApp Business en Vercel: WHATSAPP_ACCESS_TOKEN y WHATSAPP_PHONE_NUMBER_ID.',
+          'Esta empresa todavia no conecto su WhatsApp Business. Ve a Integraciones y conecta su cuenta.',
       },
       { status: 503 },
     )
@@ -78,6 +87,8 @@ export async function POST(request: Request) {
     const sendResult = await sendWhatsAppText({
       to: collaborator.phone,
       body: messageBody,
+      accessToken: company.whatsappAccessToken,
+      phoneNumberId: company.whatsappPhoneNumberId,
     })
 
     const status = sendResult.ok ? SmsStatus.SENT : SmsStatus.FAILED

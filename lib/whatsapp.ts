@@ -4,42 +4,31 @@ type WhatsAppTextResult = {
   error?: string
 }
 
-function getWhatsAppConfig() {
-  return {
-    accessToken: process.env.WHATSAPP_ACCESS_TOKEN,
-    phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID,
-  }
-}
-
-export function isWhatsAppConfigured() {
-  const config = getWhatsAppConfig()
-
-  return Boolean(config.accessToken && config.phoneNumberId)
-}
-
 export async function sendWhatsAppText({
   to,
   body,
+  accessToken,
+  phoneNumberId,
 }: {
   to: string
   body: string
+  accessToken?: string | null
+  phoneNumberId?: string | null
 }): Promise<WhatsAppTextResult> {
-  const config = getWhatsAppConfig()
-
-  if (!config.accessToken || !config.phoneNumberId) {
+  if (!accessToken || !phoneNumberId) {
     return {
       ok: false,
       error:
-        'WhatsApp Business no esta configurado. Faltan WHATSAPP_ACCESS_TOKEN y WHATSAPP_PHONE_NUMBER_ID.',
+        'Esta empresa todavia no conecto su WhatsApp Business.',
     }
   }
 
   const response = await fetch(
-    `https://graph.facebook.com/v21.0/${config.phoneNumberId}/messages`,
+    `https://graph.facebook.com/v21.0/${phoneNumberId}/messages`,
     {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${config.accessToken}`,
+        Authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({

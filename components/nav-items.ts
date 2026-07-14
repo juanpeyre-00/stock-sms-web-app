@@ -4,6 +4,7 @@ import {
   LayoutDashboard,
   MessageSquare,
   PackageOpen,
+  Plug,
   Users,
   type LucideIcon,
 } from 'lucide-react'
@@ -38,7 +39,13 @@ export const navItems: NavItem[] = [
     title: 'Enviar SMS',
     href: '/mensajes',
     icon: MessageSquare,
-    description: 'Notificar stock a numeros afiliados',
+    description: 'Enviar avisos a colaboradores',
+  },
+  {
+    title: 'Integraciones',
+    href: '/integraciones',
+    icon: Plug,
+    description: 'Conectar WhatsApp de la empresa',
   },
   {
     title: 'Empresas',
