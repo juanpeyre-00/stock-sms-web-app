@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { Check, Copy, Fish, MessageSquare, Phone, Send } from 'lucide-react'
+import { AlertCircle, Check, Copy, Fish, MessageSquare, Phone, Send } from 'lucide-react'
 
 type Colaborador = {
   id: string
@@ -10,10 +10,12 @@ type Colaborador = {
   position: string | null
 }
 
-type PreparedRecipient = {
-  id: string
+type SendResult = {
+  collaboratorId: string
   name: string
   phone: string
+  status: string
+  error?: string
 }
 
 const stockDestacado = [
@@ -32,14 +34,6 @@ function initials(name: string) {
     .slice(0, 2)
 }
 
-function cleanPhone(phone: string) {
-  return phone.replace(/[^\d+]/g, '')
-}
-
-function whatsappPhone(phone: string) {
-  return cleanPhone(phone).replace(/^\+/, '')
-}
-
 export function MensajesClient({
   colaboradores,
 }: {
@@ -56,7 +50,7 @@ export function MensajesClient({
   const [sending, setSending] = useState(false)
   const [result, setResult] = useState('')
   const [error, setError] = useState('')
-  const [prepared, setPrepared] = useState<PreparedRecipient[]>([])
+  const [sendResults, setSendResults] = useState<SendResult[]>([])
 
   const selectedCollaborators = colaboradores.filter((colaborador) =>
     seleccion.includes(colaborador.id),
@@ -85,13 +79,13 @@ export function MensajesClient({
     ].join('\n')
   }, [productos])
 
-  async function prepareCampaign() {
+  async function sendWhatsAppCampaign() {
     setSending(true)
     setError('')
     setResult('')
-    setPrepared([])
+    setSendResults([])
 
-    const response = await fetch('/api/sms/test', {
+    const response = await fetch('/api/whatsapp/send', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ collaboratorIds: seleccion, body: mensaje }),
@@ -101,24 +95,12 @@ export function MensajesClient({
     setSending(false)
 
     if (!response.ok) {
-      setError(data.message || 'No pudimos preparar la campana.')
+      setError(data.message || 'No pudimos enviar la campana.')
       return
     }
 
-    setPrepared(data.recipients || [])
-    setResult(`${data.message} Destinatarios: ${(data.recipients || []).length}`)
-  }
-
-  function openSms(recipient: PreparedRecipient) {
-    window.location.href = `sms:${cleanPhone(recipient.phone)}?&body=${encodeURIComponent(mensaje)}`
-  }
-
-  function openWhatsapp(recipient: PreparedRecipient) {
-    window.open(
-      `https://wa.me/${whatsappPhone(recipient.phone)}?text=${encodeURIComponent(mensaje)}`,
-      '_blank',
-      'noopener,noreferrer',
-    )
+    setSendResults(data.results || [])
+    setResult(data.message || 'Campana enviada.')
   }
 
   async function copyMessage() {
@@ -137,17 +119,17 @@ export function MensajesClient({
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
               StockSMS toma los colaboradores registrados, arma el mensaje y deja
-              cada envio listo para confirmar por SMS o WhatsApp.
+              el envio automatico listo desde WhatsApp Business.
             </p>
           </div>
           <button
             type="button"
-            onClick={prepareCampaign}
+            onClick={sendWhatsAppCampaign}
             disabled={seleccion.length === 0 || sending}
             className="flex h-11 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Send className="h-4 w-4" />
-            {sending ? 'Preparando...' : 'Preparar envios'}
+            {sending ? 'Enviando...' : 'Enviar WhatsApp'}
           </button>
         </div>
       </div>
@@ -283,19 +265,18 @@ export function MensajesClient({
         </section>
       </div>
 
-      {prepared.length > 0 && (
+      {sendResults.length > 0 && (
         <section className="rounded-xl border border-border bg-card">
           <div className="border-b border-border px-5 py-4">
-            <h2 className="font-semibold text-foreground">Envios preparados</h2>
+            <h2 className="font-semibold text-foreground">Resultado de envios</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Abre SMS o WhatsApp. El mensaje queda listo y solo falta confirmar
-              el envio en el telefono.
+              StockSMS intento enviar automaticamente por WhatsApp Business.
             </p>
           </div>
           <ul className="divide-y divide-border">
-            {prepared.map((recipient) => (
+            {sendResults.map((recipient) => (
               <li
-                key={recipient.id}
+                key={recipient.collaboratorId}
                 className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
               >
                 <div>
@@ -303,25 +284,26 @@ export function MensajesClient({
                   <p className="font-mono text-sm text-muted-foreground">
                     {recipient.phone}
                   </p>
+                  {recipient.error && (
+                    <p className="mt-1 text-sm text-destructive">
+                      {recipient.error}
+                    </p>
+                  )}
                 </div>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  <button
-                    type="button"
-                    onClick={() => openSms(recipient)}
-                    className="flex h-10 items-center justify-center gap-2 rounded-lg border border-border bg-card px-3 text-sm font-medium text-foreground transition-colors hover:bg-secondary"
-                  >
-                    <Send className="h-4 w-4" />
-                    Abrir SMS
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => openWhatsapp(recipient)}
-                    className="flex h-10 items-center justify-center gap-2 rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-                  >
-                    <MessageSquare className="h-4 w-4" />
-                    WhatsApp
-                  </button>
-                </div>
+                <span
+                  className={`inline-flex h-9 items-center justify-center gap-2 rounded-lg px-3 text-sm font-medium ${
+                    recipient.status === 'SENT'
+                      ? 'bg-primary/10 text-primary'
+                      : 'bg-destructive/10 text-destructive'
+                  }`}
+                >
+                  {recipient.status === 'SENT' ? (
+                    <Check className="h-4 w-4" />
+                  ) : (
+                    <AlertCircle className="h-4 w-4" />
+                  )}
+                  {recipient.status === 'SENT' ? 'Enviado' : 'Fallido'}
+                </span>
               </li>
             ))}
           </ul>
