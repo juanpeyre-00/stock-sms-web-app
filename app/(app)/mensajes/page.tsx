@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { Check, Fish, MessageSquare, Phone, Send } from 'lucide-react'
+import { Check, Copy, Fish, MessageSquare, Phone, Send } from 'lucide-react'
 
 type Afiliado = {
   id: string
@@ -43,6 +43,9 @@ export default function MensajesPage() {
   const [sending, setSending] = useState(false)
   const [result, setResult] = useState('')
   const [error, setError] = useState('')
+
+  const cleanPhone = testPhone.replace(/[^\d+]/g, '')
+  const whatsappPhone = cleanPhone.replace(/^\+/, '')
 
   const toggleAfiliado = (id: string) =>
     setSeleccion((prev) =>
@@ -89,6 +92,31 @@ export default function MensajesPage() {
     setResult(`${data.message} Numero: ${data.phone}`)
   }
 
+  async function saveAndOpenSms() {
+    await sendTestMessage()
+
+    if (!testPhone) return
+
+    window.location.href = `sms:${cleanPhone}?&body=${encodeURIComponent(mensaje)}`
+  }
+
+  async function saveAndOpenWhatsapp() {
+    await sendTestMessage()
+
+    if (!testPhone) return
+
+    window.open(
+      `https://wa.me/${whatsappPhone}?text=${encodeURIComponent(mensaje)}`,
+      '_blank',
+      'noopener,noreferrer',
+    )
+  }
+
+  async function copyMessage() {
+    await navigator.clipboard.writeText(mensaje)
+    setResult('Mensaje copiado. Puedes pegarlo en SMS o WhatsApp.')
+  }
+
   return (
     <div className="space-y-6">
       <div className="rounded-xl border border-border bg-card p-5">
@@ -99,8 +127,8 @@ export default function MensajesPage() {
               Prepara un aviso de stock para tu numero.
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-              Esta version guarda la prueba en la base de datos. El envio real al
-              telefono se activa cuando conectemos un proveedor SMS.
+              Sin proveedor pagado, StockSMS abre SMS o WhatsApp con el mensaje
+              listo. El envio automatico silencioso requiere un proveedor externo.
             </p>
           </div>
           <label className="w-full space-y-1.5 md:max-w-xs">
@@ -240,6 +268,34 @@ export default function MensajesPage() {
             >
               <Send className="h-4 w-4" />
               {sending ? 'Guardando prueba...' : 'Guardar prueba SMS'}
+            </button>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={saveAndOpenSms}
+                disabled={!testPhone || sending}
+                className="flex h-10 items-center justify-center gap-2 rounded-lg border border-border bg-card px-3 text-sm font-medium text-foreground transition-colors hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Send className="h-4 w-4" />
+                Abrir SMS
+              </button>
+              <button
+                type="button"
+                onClick={saveAndOpenWhatsapp}
+                disabled={!testPhone || sending}
+                className="flex h-10 items-center justify-center gap-2 rounded-lg border border-border bg-card px-3 text-sm font-medium text-foreground transition-colors hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <MessageSquare className="h-4 w-4" />
+                Abrir WhatsApp
+              </button>
+            </div>
+            <button
+              type="button"
+              onClick={copyMessage}
+              className="flex h-10 items-center justify-center gap-2 rounded-lg border border-border bg-card px-3 text-sm font-medium text-foreground transition-colors hover:bg-secondary"
+            >
+              <Copy className="h-4 w-4" />
+              Copiar mensaje
             </button>
           </div>
         </section>
