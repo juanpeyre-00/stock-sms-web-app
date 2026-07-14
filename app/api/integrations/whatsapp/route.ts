@@ -18,10 +18,22 @@ export async function POST(request: Request) {
   const whatsappAccessToken = String(body.whatsappAccessToken || '').trim()
   const whatsappPhoneNumberId = String(body.whatsappPhoneNumberId || '').trim()
   const whatsappDisplayName = String(body.whatsappDisplayName || '').trim()
+  const whatsappPersonalPhone = String(body.whatsappPersonalPhone || '').trim()
+  const whatsappMode =
+    String(body.whatsappMode || 'NORMAL') === 'BUSINESS_API'
+      ? 'BUSINESS_API'
+      : 'NORMAL'
 
-  if (!whatsappAccessToken || !whatsappPhoneNumberId) {
+  if (whatsappMode === 'BUSINESS_API' && (!whatsappAccessToken || !whatsappPhoneNumberId)) {
     return NextResponse.json(
       { ok: false, message: 'Ingresa token y phone number id.' },
+      { status: 400 },
+    )
+  }
+
+  if (whatsappMode === 'NORMAL' && !whatsappPersonalPhone) {
+    return NextResponse.json(
+      { ok: false, message: 'Ingresa el WhatsApp normal de la empresa.' },
       { status: 400 },
     )
   }
@@ -29,15 +41,20 @@ export async function POST(request: Request) {
   await prisma.company.update({
     where: { id: session.companyId },
     data: {
-      whatsappAccessToken,
-      whatsappPhoneNumberId,
+      whatsappAccessToken: whatsappMode === 'BUSINESS_API' ? whatsappAccessToken : null,
+      whatsappPhoneNumberId: whatsappMode === 'BUSINESS_API' ? whatsappPhoneNumberId : null,
       whatsappDisplayName: whatsappDisplayName || null,
+      whatsappMode,
+      whatsappPersonalPhone: whatsappMode === 'NORMAL' ? whatsappPersonalPhone : null,
       whatsappConnectedAt: new Date(),
     },
   })
 
   return NextResponse.json({
     ok: true,
-    message: 'WhatsApp Business conectado para esta empresa.',
+    message:
+      whatsappMode === 'BUSINESS_API'
+        ? 'WhatsApp Business conectado para esta empresa.'
+        : 'WhatsApp normal guardado para esta empresa.',
   })
 }

@@ -19,6 +19,23 @@ export default async function MensajesPage() {
         },
       })
     : []
+  const company = session
+    ? await prisma.company.findUnique({
+        where: { id: session.companyId },
+        select: {
+          whatsappMode: true,
+          whatsappPersonalPhone: true,
+          whatsappPhoneNumberId: true,
+        },
+      })
+    : null
 
-  return <MensajesClient colaboradores={colaboradores} />
+  return (
+    <MensajesClient
+      colaboradores={colaboradores}
+      whatsappMode={company?.whatsappMode || 'NORMAL'}
+      whatsappPersonalPhone={company?.whatsappPersonalPhone || ''}
+      whatsappBusinessConnected={Boolean(company?.whatsappPhoneNumberId)}
+    />
+  )
 }

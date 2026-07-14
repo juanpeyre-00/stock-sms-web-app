@@ -13,6 +13,8 @@ export default async function IntegracionesPage() {
         select: {
           whatsappPhoneNumberId: true,
           whatsappDisplayName: true,
+          whatsappMode: true,
+          whatsappPersonalPhone: true,
           whatsappConnectedAt: true,
         },
       })
@@ -26,8 +28,8 @@ export default async function IntegracionesPage() {
           Conecta el WhatsApp de esta empresa.
         </h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-          Cada cuenta conecta su propio WhatsApp Business. Los mensajes salen
-          desde el numero de esa empresa hacia sus colaboradores registrados.
+        Cada cuenta conecta su propio WhatsApp Business. Los mensajes salen
+          desde el canal de esa empresa hacia sus colaboradores registrados.
         </p>
       </section>
 
@@ -35,6 +37,8 @@ export default async function IntegracionesPage() {
         connected={Boolean(company?.whatsappPhoneNumberId)}
         displayName={company?.whatsappDisplayName || ''}
         phoneNumberId={company?.whatsappPhoneNumberId || ''}
+        mode={company?.whatsappMode || 'NORMAL'}
+        personalPhone={company?.whatsappPersonalPhone || ''}
         connectedAt={company?.whatsappConnectedAt?.toISOString() || ''}
       />
     </div>

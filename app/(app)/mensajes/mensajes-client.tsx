@@ -36,8 +36,14 @@ function initials(name: string) {
 
 export function MensajesClient({
   colaboradores,
+  whatsappMode,
+  whatsappPersonalPhone,
+  whatsappBusinessConnected,
 }: {
   colaboradores: Colaborador[]
+  whatsappMode: string
+  whatsappPersonalPhone: string
+  whatsappBusinessConnected: boolean
 }) {
   const [seleccion, setSeleccion] = useState<string[]>(
     colaboradores.map((colaborador) => colaborador.id),
@@ -103,6 +109,47 @@ export function MensajesClient({
     setResult(data.message || 'Campana enviada.')
   }
 
+  async function prepareNormalWhatsapp() {
+    setSending(true)
+    setError('')
+    setResult('')
+    setSendResults([])
+
+    const response = await fetch('/api/sms/test', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ collaboratorIds: seleccion, body: mensaje }),
+    })
+    const data = await response.json()
+
+    setSending(false)
+
+    if (!response.ok) {
+      setError(data.message || 'No pudimos preparar los mensajes.')
+      return
+    }
+
+    setSendResults(
+      (data.recipients || []).map((recipient: PreparedRecipient) => ({
+        collaboratorId: recipient.id,
+        name: recipient.name,
+        phone: recipient.phone,
+        status: 'READY',
+      })),
+    )
+    setResult(
+      `Mensajes listos para enviar desde WhatsApp normal. Destinatarios: ${(data.recipients || []).length}`,
+    )
+  }
+
+  function openWhatsapp(phone: string) {
+    window.open(
+      `https://wa.me/${phone.replace(/[^\d]/g, '')}?text=${encodeURIComponent(mensaje)}`,
+      '_blank',
+      'noopener,noreferrer',
+    )
+  }
+
   async function copyMessage() {
     await navigator.clipboard.writeText(mensaje)
     setResult('Mensaje copiado. Puedes pegarlo en SMS o WhatsApp.')
@@ -118,18 +165,37 @@ export function MensajesClient({
               Un click prepara el aviso para los colaboradores.
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-              StockSMS toma los colaboradores registrados, arma el mensaje y deja
-              el envio automatico listo desde WhatsApp Business.
+              {whatsappMode === 'BUSINESS_API'
+                ? 'StockSMS envia automaticamente desde el WhatsApp Business conectado de esta empresa.'
+                : 'StockSMS arma los mensajes y abre WhatsApp normal del jefe con cada chat listo para confirmar.'}
+            </p>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Canal actual:{' '}
+              {whatsappMode === 'BUSINESS_API'
+                ? whatsappBusinessConnected
+                  ? 'WhatsApp Business API conectado'
+                  : 'WhatsApp Business API pendiente de conexion'
+                : `WhatsApp normal ${whatsappPersonalPhone || 'sin numero guardado'}`}
             </p>
           </div>
           <button
             type="button"
-            onClick={sendWhatsAppCampaign}
+            onClick={
+              whatsappMode === 'BUSINESS_API'
+                ? sendWhatsAppCampaign
+                : prepareNormalWhatsapp
+            }
             disabled={seleccion.length === 0 || sending}
             className="flex h-11 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Send className="h-4 w-4" />
-            {sending ? 'Enviando...' : 'Enviar WhatsApp'}
+            {sending
+              ? whatsappMode === 'BUSINESS_API'
+                ? 'Enviando...'
+                : 'Preparando...'
+              : whatsappMode === 'BUSINESS_API'
+                ? 'Enviar WhatsApp'
+                : 'Preparar WhatsApp'}
           </button>
         </div>
       </div>
@@ -270,7 +336,9 @@ export function MensajesClient({
           <div className="border-b border-border px-5 py-4">
             <h2 className="font-semibold text-foreground">Resultado de envios</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              StockSMS intento enviar automaticamente por WhatsApp Business.
+              {whatsappMode === 'BUSINESS_API'
+                ? 'StockSMS intento enviar automaticamente por WhatsApp Business.'
+                : 'Abre cada chat de WhatsApp. El texto queda listo para confirmar envio.'}
             </p>
           </div>
           <ul className="divide-y divide-border">
@@ -290,20 +358,31 @@ export function MensajesClient({
                     </p>
                   )}
                 </div>
-                <span
-                  className={`inline-flex h-9 items-center justify-center gap-2 rounded-lg px-3 text-sm font-medium ${
-                    recipient.status === 'SENT'
-                      ? 'bg-primary/10 text-primary'
-                      : 'bg-destructive/10 text-destructive'
-                  }`}
-                >
-                  {recipient.status === 'SENT' ? (
-                    <Check className="h-4 w-4" />
-                  ) : (
-                    <AlertCircle className="h-4 w-4" />
-                  )}
-                  {recipient.status === 'SENT' ? 'Enviado' : 'Fallido'}
-                </span>
+                {recipient.status === 'READY' ? (
+                  <button
+                    type="button"
+                    onClick={() => openWhatsapp(recipient.phone)}
+                    className="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+                  >
+                    <MessageSquare className="h-4 w-4" />
+                    Abrir WhatsApp
+                  </button>
+                ) : (
+                  <span
+                    className={`inline-flex h-9 items-center justify-center gap-2 rounded-lg px-3 text-sm font-medium ${
+                      recipient.status === 'SENT'
+                        ? 'bg-primary/10 text-primary'
+                        : 'bg-destructive/10 text-destructive'
+                    }`}
+                  >
+                    {recipient.status === 'SENT' ? (
+                      <Check className="h-4 w-4" />
+                    ) : (
+                      <AlertCircle className="h-4 w-4" />
+                    )}
+                    {recipient.status === 'SENT' ? 'Enviado' : 'Fallido'}
+                  </span>
+                )}
               </li>
             ))}
           </ul>

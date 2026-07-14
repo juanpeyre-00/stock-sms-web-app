@@ -49,6 +49,8 @@ model Company {
   whatsappAccessToken String?
   whatsappPhoneNumberId String?
   whatsappDisplayName String?
+  whatsappMode String? @default("NORMAL")
+  whatsappPersonalPhone String?
   whatsappConnectedAt DateTime?
   internalNotes      String?
   createdAt          DateTime            @default(now())
