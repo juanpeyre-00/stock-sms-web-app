@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { MessageSquare, Send, Phone, Check, Fish } from 'lucide-react'
+import { Check, Fish, MessageSquare, Phone, Send } from 'lucide-react'
 
 type Afiliado = {
   id: string
@@ -11,11 +11,9 @@ type Afiliado = {
 }
 
 const afiliados: Afiliado[] = [
-  { id: 'a1', name: 'María Álvarez', phone: '+56 9 6123 4567', role: 'Administradora' },
+  { id: 'a1', name: 'Maria Alvarez', phone: '+56 9 6123 4567', role: 'Administradora' },
   { id: 'a2', name: 'Carlos Ruiz', phone: '+56 9 6234 5678', role: 'Supervisor' },
   { id: 'a3', name: 'Ana Torres', phone: '+56 9 6345 6789', role: 'Operario' },
-  { id: 'a4', name: 'Sofía Díaz', phone: '+56 9 6567 8901', role: 'Supervisor' },
-  { id: 'a5', name: 'Diego Ramírez', phone: '+56 9 6678 9012', role: 'Operario' },
 ]
 
 const stockDestacado = [
@@ -23,7 +21,7 @@ const stockDestacado = [
   { name: 'Congrio dorado', stock: 4, unit: 'kg', bajo: true },
   { name: 'Choritos de Magallanes', stock: 340, unit: 'kg', bajo: false },
   { name: 'Reineta fresca', stock: 21, unit: 'kg', bajo: true },
-  { name: 'Centolla magallánica', stock: 95, unit: 'uds', bajo: false },
+  { name: 'Centolla magallanica', stock: 95, unit: 'uds', bajo: false },
 ]
 
 function initials(name: string) {
@@ -41,6 +39,10 @@ export default function MensajesPage() {
     'Congrio dorado',
     'Reineta fresca',
   ])
+  const [testPhone, setTestPhone] = useState('')
+  const [sending, setSending] = useState(false)
+  const [result, setResult] = useState('')
+  const [error, setError] = useState('')
 
   const toggleAfiliado = (id: string) =>
     setSeleccion((prev) =>
@@ -55,23 +57,71 @@ export default function MensajesPage() {
   const mensaje = useMemo(() => {
     const lineas = stockDestacado
       .filter((p) => productos.includes(p.name))
-      .map((p) => `• ${p.name}: ${p.stock} ${p.unit}`)
+      .map((p) => `- ${p.name}: ${p.stock} ${p.unit}`)
     return [
-      'StockSMS — Reporte de stock del día',
+      'StockSMS - Reporte de stock del dia',
       '',
       ...(lineas.length ? lineas : ['(Sin productos seleccionados)']),
       '',
-      'Revisar reposición de productos con stock bajo.',
+      'Revisar reposicion de productos con stock bajo.',
     ].join('\n')
   }, [productos])
 
+  async function sendTestMessage() {
+    setSending(true)
+    setError('')
+    setResult('')
+
+    const response = await fetch('/api/sms/test', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: testPhone, body: mensaje }),
+    })
+    const data = await response.json()
+
+    setSending(false)
+
+    if (!response.ok) {
+      setError(data.message || 'No pudimos guardar la prueba.')
+      return
+    }
+
+    setResult(`${data.message} Numero: ${data.phone}`)
+  }
+
   return (
     <div className="space-y-6">
+      <div className="rounded-xl border border-border bg-card p-5">
+        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div>
+            <p className="text-sm font-medium text-primary">Prueba con telefono real</p>
+            <h1 className="mt-1 text-2xl font-semibold text-foreground">
+              Prepara un aviso de stock para tu numero.
+            </h1>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
+              Esta version guarda la prueba en la base de datos. El envio real al
+              telefono se activa cuando conectemos un proveedor SMS.
+            </p>
+          </div>
+          <label className="w-full space-y-1.5 md:max-w-xs">
+            <span className="text-sm font-medium text-foreground">Numero de prueba</span>
+            <span className="relative block">
+              <Phone className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <input
+                value={testPhone}
+                onChange={(event) => setTestPhone(event.target.value)}
+                placeholder="+56 9 XXXX XXXX"
+                className="h-11 w-full rounded-lg border border-input bg-background pl-10 pr-3 text-sm outline-none focus:ring-2 focus:ring-ring/40"
+              />
+            </span>
+          </label>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Números afiliados */}
         <section className="rounded-xl border border-border bg-card lg:col-span-1">
           <div className="flex items-center justify-between border-b border-border px-5 py-4">
-            <h2 className="font-semibold text-foreground">Números afiliados</h2>
+            <h2 className="font-semibold text-foreground">Numeros afiliados</h2>
             <span className="rounded-full bg-accent px-2 py-0.5 text-xs font-medium text-accent-foreground">
               {seleccion.length} seleccionados
             </span>
@@ -114,7 +164,6 @@ export default function MensajesPage() {
           </ul>
         </section>
 
-        {/* Productos a incluir */}
         <section className="rounded-xl border border-border bg-card lg:col-span-1">
           <div className="flex items-center justify-between border-b border-border px-5 py-4">
             <h2 className="font-semibold text-foreground">Stock a notificar</h2>
@@ -159,11 +208,10 @@ export default function MensajesPage() {
           </ul>
         </section>
 
-        {/* Previsualización del SMS */}
         <section className="flex flex-col rounded-xl border border-border bg-card lg:col-span-1">
           <div className="flex items-center gap-2 border-b border-border px-5 py-4">
             <MessageSquare className="h-4 w-4 text-muted-foreground" />
-            <h2 className="font-semibold text-foreground">Previsualización</h2>
+            <h2 className="font-semibold text-foreground">Previsualizacion</h2>
           </div>
           <div className="flex flex-1 flex-col gap-4 p-5">
             <div className="rounded-lg bg-secondary p-4">
@@ -172,16 +220,26 @@ export default function MensajesPage() {
               </pre>
             </div>
             <p className="text-xs text-muted-foreground">
-              Se enviará a {seleccion.length}{' '}
-              {seleccion.length === 1 ? 'número afiliado' : 'números afiliados'}.
+              Se preparara para {seleccion.length} afiliados y para el numero de prueba.
             </p>
+            {result && (
+              <p className="rounded-lg border border-primary/20 bg-primary/10 px-3 py-2 text-sm text-primary">
+                {result}
+              </p>
+            )}
+            {error && (
+              <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                {error}
+              </p>
+            )}
             <button
               type="button"
-              disabled={seleccion.length === 0}
+              onClick={sendTestMessage}
+              disabled={!testPhone || sending}
               className="mt-auto flex h-11 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Send className="h-4 w-4" />
-              Enviar SMS
+              {sending ? 'Guardando prueba...' : 'Guardar prueba SMS'}
             </button>
           </div>
         </section>
