@@ -22,39 +22,69 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}))
   const phone = normalizePhone(String(body.phone || ''))
   const messageBody = String(body.body || '').trim()
+  const collaboratorIds = Array.isArray(body.collaboratorIds)
+    ? body.collaboratorIds.map((id) => String(id))
+    : []
 
-  if (!phone || !messageBody) {
+  if ((!phone && collaboratorIds.length === 0) || !messageBody) {
     return NextResponse.json(
-      { ok: false, message: 'Ingresa telefono y mensaje.' },
+      { ok: false, message: 'Selecciona destinatarios y mensaje.' },
       { status: 400 },
     )
   }
 
-  if (!phone.startsWith('+')) {
+  if (phone && !phone.startsWith('+')) {
     return NextResponse.json(
       { ok: false, message: 'Usa formato internacional, por ejemplo +56 9 XXXX XXXX.' },
       { status: 400 },
     )
   }
 
-  const collaborator = await prisma.collaborator.upsert({
-    where: {
-      companyId_phone: {
+  const recipients = []
+
+  if (collaboratorIds.length > 0) {
+    const collaborators = await prisma.collaborator.findMany({
+      where: {
         companyId: session.companyId,
-        phone,
+        id: { in: collaboratorIds },
+        active: true,
       },
-    },
-    update: {
-      active: true,
-      position: 'Numero de prueba',
-    },
-    create: {
-      companyId: session.companyId,
-      name: 'Telefono de prueba',
-      phone,
-      position: 'Numero de prueba',
-    },
-  })
+      select: { id: true, name: true, phone: true },
+    })
+
+    recipients.push(...collaborators)
+  }
+
+  if (phone) {
+    const collaborator = await prisma.collaborator.upsert({
+      where: {
+        companyId_phone: {
+          companyId: session.companyId,
+          phone,
+        },
+      },
+      update: {
+        active: true,
+        position: 'Numero de prueba',
+      },
+      create: {
+        companyId: session.companyId,
+        name: 'Telefono de prueba',
+        phone,
+        position: 'Numero de prueba',
+      },
+      select: { id: true, name: true, phone: true },
+    })
+
+    recipients.push(collaborator)
+  }
+
+  if (recipients.length === 0) {
+    return NextResponse.json(
+      { ok: false, message: 'No encontramos destinatarios activos.' },
+      { status: 400 },
+    )
+  }
 
   const smsMessage = await prisma.smsMessage.create({
     data: {
@@ -62,11 +92,11 @@ export async function POST(request: Request) {
       body: messageBody,
       status: SmsStatus.DRAFT,
       recipients: {
-        create: {
-          collaboratorId: collaborator.id,
-          phoneSnapshot: phone,
+        create: recipients.map((recipient) => ({
+          collaboratorId: recipient.id,
+          phoneSnapshot: recipient.phone,
           status: SmsStatus.DRAFT,
-        },
+        })),
       },
     },
   })
@@ -74,8 +104,8 @@ export async function POST(request: Request) {
   return NextResponse.json({
     ok: true,
     message:
-      'Prueba guardada. Falta conectar proveedor SMS para enviarla al telefono.',
+      'Campana preparada. Abre SMS o WhatsApp para confirmar cada envio.',
     smsMessageId: smsMessage.id,
-    phone,
+    recipients,
   })
 }
