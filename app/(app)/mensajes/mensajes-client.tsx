@@ -109,11 +109,23 @@ export function MensajesClient({
     setResult(data.message || 'Campana enviada.')
   }
 
-  async function prepareNormalWhatsapp() {
+  async function sendNormalWhatsappBatch() {
     setSending(true)
     setError('')
     setResult('')
-    setSendResults([])
+
+    const recipients = selectedCollaborators.map((collaborator) => ({
+      collaboratorId: collaborator.id,
+      name: collaborator.name,
+      phone: collaborator.phone,
+      status: 'OPENED',
+    }))
+
+    setSendResults(recipients)
+
+    for (const collaborator of selectedCollaborators) {
+      openWhatsapp(collaborator.phone)
+    }
 
     const response = await fetch('/api/sms/test', {
       method: 'POST',
@@ -125,20 +137,12 @@ export function MensajesClient({
     setSending(false)
 
     if (!response.ok) {
-      setError(data.message || 'No pudimos preparar los mensajes.')
+      setError(data.message || 'Abrimos WhatsApp, pero no pudimos guardar la campana.')
       return
     }
 
-    setSendResults(
-      (data.recipients || []).map((recipient: PreparedRecipient) => ({
-        collaboratorId: recipient.id,
-        name: recipient.name,
-        phone: recipient.phone,
-        status: 'READY',
-      })),
-    )
     setResult(
-      `Mensajes listos para enviar desde WhatsApp normal. Destinatarios: ${(data.recipients || []).length}`,
+      `WhatsApp abierto para ${selectedCollaborators.length} colaboradores seleccionados.`,
     )
   }
 
@@ -183,7 +187,7 @@ export function MensajesClient({
             onClick={
               whatsappMode === 'BUSINESS_API'
                 ? sendWhatsAppCampaign
-                : prepareNormalWhatsapp
+                : sendNormalWhatsappBatch
             }
             disabled={seleccion.length === 0 || sending}
             className="flex h-11 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
@@ -195,7 +199,7 @@ export function MensajesClient({
                 : 'Preparando...'
               : whatsappMode === 'BUSINESS_API'
                 ? 'Enviar WhatsApp'
-                : 'Preparar WhatsApp'}
+                : 'Enviar WhatsApp normal'}
           </button>
         </div>
       </div>
@@ -338,7 +342,7 @@ export function MensajesClient({
             <p className="mt-1 text-sm text-muted-foreground">
               {whatsappMode === 'BUSINESS_API'
                 ? 'StockSMS intento enviar automaticamente por WhatsApp Business.'
-                : 'Abre cada chat de WhatsApp. El texto queda listo para confirmar envio.'}
+                : 'StockSMS abrio los chats seleccionados con el mensaje listo para confirmar envio.'}
             </p>
           </div>
           <ul className="divide-y divide-border">
@@ -358,14 +362,14 @@ export function MensajesClient({
                     </p>
                   )}
                 </div>
-                {recipient.status === 'READY' ? (
+                {recipient.status === 'OPENED' ? (
                   <button
                     type="button"
                     onClick={() => openWhatsapp(recipient.phone)}
                     className="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
                   >
                     <MessageSquare className="h-4 w-4" />
-                    Abrir WhatsApp
+                    Reabrir WhatsApp
                   </button>
                 ) : (
                   <span
